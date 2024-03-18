@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreApplicationRequest;
 use App\Jobs\SendEmailJob;
 use App\Mail\ApplicationCreated;
 use App\Models\Application;
@@ -18,22 +19,19 @@ class ApplicationController extends Controller
 //        $applications = Application::all(); // Or however you retrieve your applications
 //        return view('dashboard')->with('applications', $applications);
 //    }
-    public function store(Request $request)
+    public function store(StoreApplicationRequest $request)
     {
         // 1 kunda 1 marta ariza berish
         if ($this->checkDate()) {
           return  redirect()->back()->with('error','You can create only 1 application a day');
         }
 
+        // file bilan ishlash
         if ($request->hasFile('file')){
             $name = $request->file('file')->getClientOriginalName();
             $path = $request->file('file')->storeAs('files', $name ,'public');
         }
-         $request->validate([
-            'subject' => 'required|string|max:255',
-            'message' => 'required',
-            'file' => 'file|mimes:jpg,png,pdf',
-        ]);
+
         $application = Application::create([
             'user_id'=>auth()->user()->id,
             'subject' => $request->subject,
@@ -41,6 +39,7 @@ class ApplicationController extends Controller
             'file_url' => $path ?? null,
         ]);
 
+        // eshttirish - tarqatish (email)
         dispatch(new SendEmailJob($application));
         return redirect()->back();
     }
